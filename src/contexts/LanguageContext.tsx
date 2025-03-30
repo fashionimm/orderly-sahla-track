@@ -147,7 +147,7 @@ type ContextType = {
 };
 
 const LanguageContext = createContext<ContextType>({
-  language: 'en',
+  language: 'fr',  // Change default to French
   setLanguage: () => {},
   t: (key) => key.toString(),
 });
@@ -155,10 +155,10 @@ const LanguageContext = createContext<ContextType>({
 export const useLanguage = () => useContext(LanguageContext);
 
 export const LanguageProvider = ({ children }: { children: ReactNode }) => {
-  // Get language from localStorage if available, otherwise default to 'en'
+  // Get language from localStorage if available, otherwise default to 'fr'
   const [language, setLanguage] = useState<LanguageType>(() => {
     const savedLanguage = localStorage.getItem('sahlaTrackLanguage');
-    return (savedLanguage as LanguageType) || 'en';
+    return (savedLanguage as LanguageType) || 'fr';  // Change default to French
   });
 
   // Save language preference to localStorage

@@ -2,6 +2,7 @@
 import React from 'react';
 import { Bell, User, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,16 +15,35 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
+import LanguageSwitcher from './LanguageSwitcher';
+
+// Header translations
+const headerTranslations = {
+  en: {
+    profile: "Profile",
+    adminPanel: "Admin Panel",
+    logout: "Log out"
+  },
+  fr: {
+    profile: "Profil",
+    adminPanel: "Panneau d'Administration",
+    logout: "Déconnexion"
+  }
+};
 
 const Header = () => {
   const { user, signOut, isAdmin } = useAuth();
+  const { language } = useLanguage();
+  
+  // Get translations
+  const t = headerTranslations[language];
   
   // Add nice animation to the avatar fallback
   const getRandomHue = () => Math.floor(Math.random() * 360);
   const [hue] = React.useState(getRandomHue());
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-card px-4 shadow-sm">
+    <header className="sticky top-0 z-30 flex h-14 sm:h-16 items-center border-b bg-card px-2 sm:px-4 shadow-sm">
       <div className="flex items-center">
         <SidebarTrigger className="mr-2" />
         <span className="text-lg font-bold text-sahla-700 md:hidden">
@@ -31,9 +51,11 @@ const Header = () => {
         </span>
       </div>
       
-      <div className="ml-auto flex items-center space-x-4">
+      <div className="ml-auto flex items-center space-x-2 sm:space-x-4">
+        <LanguageSwitcher />
+        
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
+          <Bell className="h-4 w-5" />
           <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500"></span>
         </Button>
         
@@ -65,16 +87,16 @@ const Header = () => {
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <User className="mr-2 h-4 w-4" />
-              Profile
+              {t.profile}
             </DropdownMenuItem>
             {isAdmin && (
               <DropdownMenuItem asChild>
-                <a href="/admin">Admin Panel</a>
+                <a href="/admin">{t.adminPanel}</a>
               </DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => signOut()}>
-              Log out
+              {t.logout}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

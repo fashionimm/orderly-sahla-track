@@ -2,6 +2,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Home, Package, Users, Settings, CreditCard, BarChart3, 
   ShoppingCart, Menu
@@ -23,30 +24,58 @@ import {
   SidebarProvider
 } from '@/components/ui/sidebar';
 
+// Sidebar translations
+const sidebarTranslations = {
+  en: {
+    dashboard: "Dashboard",
+    orders: "Orders",
+    customers: "Customers",
+    subscription: "Subscription",
+    analytics: "Analytics",
+    allOrders: "All Orders",
+    manageUsers: "Manage Users",
+    settings: "Settings"
+  },
+  fr: {
+    dashboard: "Tableau de Bord",
+    orders: "Commandes",
+    customers: "Clients",
+    subscription: "Abonnement",
+    analytics: "Analytiques",
+    allOrders: "Toutes les Commandes",
+    manageUsers: "Gérer les Utilisateurs",
+    settings: "Paramètres"
+  }
+};
+
 const Sidebar = () => {
   const { isAdmin } = useAuth();
+  const { language } = useLanguage();
   const location = useLocation();
   const isMobile = useIsMobile();
   
+  // Get translations
+  const t = sidebarTranslations[language];
+  
   const links = [
-    { href: '/dashboard', label: 'Dashboard', icon: Home },
-    { href: '/orders', label: 'Orders', icon: Package },
-    { href: '/customers', label: 'Customers', icon: Users },
-    { href: '/subscription', label: 'Subscription', icon: CreditCard },
+    { href: '/dashboard', label: t.dashboard, icon: Home },
+    { href: '/orders', label: t.orders, icon: Package },
+    { href: '/customers', label: t.customers, icon: Users },
+    { href: '/subscription', label: t.subscription, icon: CreditCard },
   ];
   
   // Add admin links if user is admin
   if (isAdmin) {
     links.push(
-      { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-      { href: '/admin/orders', label: 'All Orders', icon: ShoppingCart },
-      { href: '/admin/users', label: 'Manage Users', icon: Users }
+      { href: '/admin/analytics', label: t.analytics, icon: BarChart3 },
+      { href: '/admin/orders', label: t.allOrders, icon: ShoppingCart },
+      { href: '/admin/users', label: t.manageUsers, icon: Users }
     );
   }
   
   const renderSidebarContent = () => (
     <>
-      <SidebarHeader className="flex h-16 items-center px-4 border-b">
+      <SidebarHeader className="flex h-14 sm:h-16 items-center px-4 border-b">
         <div className="flex items-center">
           <span className="text-lg font-bold text-sahla-700 transition-all duration-300 font-logo animate-text">
             Sahla-Track
@@ -100,7 +129,7 @@ const Sidebar = () => {
               )}
             >
               <Settings className="h-5 w-5 mr-3 text-slate-400" />
-              Settings
+              {t.settings}
             </NavLink>
           </SidebarMenuButton>
         </div>
