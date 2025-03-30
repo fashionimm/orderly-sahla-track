@@ -1,16 +1,18 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useOrders } from '@/contexts/OrderContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, Users, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Package, Users, TrendingUp, AlertTriangle, BarChart2, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import ChatbotWidget from '@/components/chat/ChatbotWidget';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const { orders } = useOrders();
-
+  const [showChatbot, setShowChatbot] = useState(false);
+  
   // Calculate stats
   const totalOrders = orders.length;
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
@@ -29,13 +31,37 @@ const Dashboard = () => {
   const isNearLimit = user && user.subscription === 'free' && 
     user.ordersUsed >= (user.orderLimit * 0.8);
 
+  // Check if user has premium features
+  const hasPremiumAccess = user && (user.subscription === 'premium' || user.subscription === 'unlimited');
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <Button asChild>
-          <Link to="/orders/new">New Order</Link>
-        </Button>
+        <div>
+          <h1 className="text-2xl font-bold text-sahla-800">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {user?.name}!</p>
+        </div>
+        <div className="flex gap-3">
+          {hasPremiumAccess && (
+            <Button 
+              variant="outline" 
+              onClick={() => setShowChatbot(!showChatbot)}
+              className="flex items-center gap-2"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sahla-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-sahla-500"></span>
+              </span>
+              AI Assistant
+            </Button>
+          )}
+          <Button asChild className="bg-sahla-500 hover:bg-sahla-600">
+            <Link to="/orders/new" className="flex items-center gap-2">
+              <PlusCircle className="h-4 w-4" />
+              New Order
+            </Link>
+          </Button>
+        </div>
       </div>
       
       {isNearLimit && (
@@ -54,37 +80,39 @@ const Dashboard = () => {
         </Card>
       )}
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-gradient-to-br from-sahla-50 to-white border-sahla-100 shadow hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
+            <Package className="h-4 w-4 text-sahla-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalOrders}</div>
-            <div className="flex mt-2 justify-between">
+            <div className="flex mt-2 gap-2 flex-wrap">
               <span className="sahla-badge-pending">{pendingOrders} pending</span>
               <span className="sahla-badge-shipped">{shippedOrders} shipped</span>
               <span className="sahla-badge-delivered">{deliveredOrders} delivered</span>
             </div>
           </CardContent>
         </Card>
-        <Card>
+        
+        <Card className="bg-gradient-to-br from-sahla-50 to-white border-sahla-100 shadow hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Customers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <Users className="h-4 w-4 text-sahla-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{uniqueCustomers}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Unique phone numbers in your order database
+              Unique phone numbers in your database
             </p>
           </CardContent>
         </Card>
-        <Card>
+        
+        <Card className="bg-gradient-to-br from-sahla-50 to-white border-sahla-100 shadow hover:shadow-md transition-all">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Orders This Month</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <TrendingUp className="h-4 w-4 text-sahla-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalOrders}</div>
@@ -95,12 +123,29 @@ const Dashboard = () => {
             </p>
           </CardContent>
         </Card>
+        
+        <Card className="bg-gradient-to-br from-sahla-50 to-white border-sahla-100 shadow hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Performance</CardTitle>
+            <BarChart2 className="h-4 w-4 text-sahla-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {deliveredOrders > 0 
+                ? Math.round((deliveredOrders / totalOrders) * 100) 
+                : 0}%
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Delivery success rate
+            </p>
+          </CardContent>
+        </Card>
       </div>
       
       <div>
-        <h2 className="text-lg font-semibold mb-4">Recent Orders</h2>
+        <h2 className="text-lg font-semibold mb-4 text-sahla-700">Recent Orders</h2>
         {recentOrders.length > 0 ? (
-          <div className="overflow-x-auto rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border shadow">
             <table className="sahla-table">
               <thead>
                 <tr>
@@ -113,7 +158,7 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {recentOrders.map(order => (
-                  <tr key={order.id}>
+                  <tr key={order.id} className="hover:bg-sahla-50 transition-colors">
                     <td className="font-medium">{order.orderId}</td>
                     <td>{order.customerName}</td>
                     <td>{order.city}</td>
@@ -132,13 +177,17 @@ const Dashboard = () => {
           <Card className="p-8 text-center">
             <CardContent>
               <p className="text-muted-foreground">No orders yet</p>
-              <Button asChild className="mt-4">
+              <Button asChild className="mt-4 bg-sahla-500 hover:bg-sahla-600">
                 <Link to="/orders/new">Create your first order</Link>
               </Button>
             </CardContent>
           </Card>
         )}
       </div>
+      
+      {showChatbot && hasPremiumAccess && (
+        <ChatbotWidget onClose={() => setShowChatbot(false)} />
+      )}
     </div>
   );
 };

@@ -1,6 +1,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useLanguage } from './LanguageContext';
 
 // Define user type
 type UserType = {
@@ -18,6 +20,7 @@ type AuthContextType = {
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
 };
@@ -28,6 +31,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signUp: async () => {},
   signIn: async () => {},
+  signInWithGoogle: async () => {},
   signOut: async () => {},
   isAdmin: false,
 });
@@ -40,6 +44,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<UserType>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { language } = useLanguage();
 
   // Mock authentication functions for now
   // These will be replaced with Supabase auth later
@@ -61,10 +66,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Store in local storage for persistence
       localStorage.setItem('sahlaUser', JSON.stringify(newUser));
       setUser(newUser);
-      toast.success('Account created successfully');
+      toast.success(language === 'en' ? 'Account created successfully' : 'Compte créé avec succès');
     } catch (error) {
       console.error('Signup error:', error);
-      toast.error('Failed to create account');
+      toast.error(language === 'en' ? 'Failed to create account' : 'Échec de la création du compte');
     }
   };
 
@@ -100,10 +105,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(newUser);
       }
       
-      toast.success('Signed in successfully');
+      toast.success(language === 'en' ? 'Signed in successfully' : 'Connecté avec succès');
     } catch (error) {
       console.error('Signin error:', error);
-      toast.error('Failed to sign in');
+      toast.error(language === 'en' ? 'Failed to sign in' : 'Échec de la connexion');
+      throw error;
+    }
+  };
+  
+  const signInWithGoogle = async () => {
+    try {
+      // Simulate API call for Google login
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock Google user creation
+      const googleUser = {
+        id: `google-user-${Date.now()}`,
+        email: 'google-user@example.com',
+        name: 'Google User',
+        subscription: 'free' as const,
+        orderLimit: 20,
+        ordersUsed: 0
+      };
+      
+      localStorage.setItem('sahlaUser', JSON.stringify(googleUser));
+      setUser(googleUser);
+      toast.success(language === 'en' ? 'Signed in with Google' : 'Connecté avec Google');
+    } catch (error) {
+      console.error('Google signin error:', error);
+      toast.error(language === 'en' ? 'Failed to sign in with Google' : 'Échec de la connexion avec Google');
+      throw error;
     }
   };
 
@@ -113,10 +144,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('sahlaUser');
       setUser(null);
       setIsAdmin(false);
-      toast.success('Signed out successfully');
+      toast.success(language === 'en' ? 'Signed out successfully' : 'Déconnecté avec succès');
     } catch (error) {
       console.error('Signout error:', error);
-      toast.error('Failed to sign out');
+      toast.error(language === 'en' ? 'Failed to sign out' : 'Échec de la déconnexion');
     }
   };
 
@@ -142,7 +173,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut, isAdmin }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      loading, 
+      signUp, 
+      signIn, 
+      signInWithGoogle, 
+      signOut, 
+      isAdmin 
+    }}>
       {children}
     </AuthContext.Provider>
   );
