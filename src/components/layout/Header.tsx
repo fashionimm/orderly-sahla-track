@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Menu, Bell, User } from 'lucide-react';
+import { Bell, User, Menu } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   DropdownMenu,
@@ -12,18 +12,23 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { useSidebar } from '@/contexts/SidebarContext';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 const Header = () => {
   const { user, signOut, isAdmin } = useAuth();
-  const { toggleSidebar } = useSidebar();
+  
+  // Add nice animation to the avatar fallback
+  const getRandomHue = () => Math.floor(Math.random() * 360);
+  const [hue] = React.useState(getRandomHue());
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-card px-4 shadow-sm">
       <div className="flex items-center">
-        <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden mr-2">
-          <Menu className="h-5 w-5" />
-        </Button>
+        <SidebarTrigger className="mr-2" />
+        <span className="text-lg font-bold text-sahla-700 md:hidden">
+          Sahla-Track
+        </span>
       </div>
       
       <div className="ml-auto flex items-center space-x-4">
@@ -36,7 +41,15 @@ const Header = () => {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-8 w-8 rounded-full">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className="bg-sahla-500 text-white">
+                <AvatarFallback 
+                  className={cn(
+                    "bg-sahla-500 text-white",
+                    "transition-all hover:scale-105"
+                  )}
+                  style={{ 
+                    background: `linear-gradient(135deg, hsl(${hue}, 80%, 60%), hsl(${hue + 60}, 80%, 60%))` 
+                  }}
+                >
                   {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
                 </AvatarFallback>
               </Avatar>

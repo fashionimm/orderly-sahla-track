@@ -4,6 +4,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 const AppLayout = () => {
   const { user, loading } = useAuth();
@@ -23,15 +24,17 @@ const AppLayout = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar />
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6">
-          <Outlet />
-        </main>
+    <SidebarProvider>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <Sidebar />
+        <div className="flex flex-col flex-1 w-full overflow-hidden">
+          <Header />
+          <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+            <Outlet />
+          </main>
+        </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 };
 
