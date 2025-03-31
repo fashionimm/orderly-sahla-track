@@ -12,6 +12,8 @@ type UserType = {
   subscription: 'free' | 'premium' | 'unlimited';
   orderLimit: number;
   ordersUsed: number;
+  subscription_status?: 'pending' | 'rejected' | 'approved';
+  requested_subscription?: string;
 } | null;
 
 // Define context type
@@ -23,6 +25,7 @@ type AuthContextType = {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  refreshUser: () => Promise<void>;
 };
 
 // Create context with default values
@@ -34,6 +37,7 @@ const AuthContext = createContext<AuthContextType>({
   signInWithGoogle: async () => {},
   signOut: async () => {},
   isAdmin: false,
+  refreshUser: async () => {},
 });
 
 // Hook to use auth context
@@ -45,6 +49,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const { language } = useLanguage();
+
+  // Function to refresh user data
+  const refreshUser = async () => {
+    try {
+      const storedUser = localStorage.getItem('sahlaUser');
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        // Check if user is admin
+        setIsAdmin(parsedUser.email.includes('admin'));
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+  };
 
   // Mock authentication functions for now
   // These will be replaced with Supabase auth later
@@ -60,7 +79,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         name,
         subscription: 'free' as const,
         orderLimit: 20,
-        ordersUsed: 0
+        ordersUsed: 0,
+        subscription_status: undefined,
+        requested_subscription: undefined
       };
       
       // Store in local storage for persistence
@@ -86,7 +107,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           name: 'Admin User',
           subscription: 'unlimited' as const,
           orderLimit: Infinity,
-          ordersUsed: 0
+          ordersUsed: 0,
+          subscription_status: undefined,
+          requested_subscription: undefined
         };
         localStorage.setItem('sahlaUser', JSON.stringify(adminUser));
         setUser(adminUser);
@@ -99,7 +122,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           name: email.split('@')[0],
           subscription: 'free' as const,
           orderLimit: 20,
-          ordersUsed: 0
+          ordersUsed: 0,
+          subscription_status: undefined,
+          requested_subscription: undefined
         };
         localStorage.setItem('sahlaUser', JSON.stringify(newUser));
         setUser(newUser);
@@ -125,7 +150,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         name: 'Google User',
         subscription: 'free' as const,
         orderLimit: 20,
-        ordersUsed: 0
+        ordersUsed: 0,
+        subscription_status: undefined,
+        requested_subscription: undefined
       };
       
       localStorage.setItem('sahlaUser', JSON.stringify(googleUser));
@@ -180,7 +207,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signIn, 
       signInWithGoogle, 
       signOut, 
-      isAdmin 
+      isAdmin,
+      refreshUser
     }}>
       {children}
     </AuthContext.Provider>

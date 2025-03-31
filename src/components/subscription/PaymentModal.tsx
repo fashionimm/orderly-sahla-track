@@ -78,18 +78,15 @@ const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) 
     setIsSubmitting(true);
     
     try {
-      // Update user's subscription status to pending
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          subscription_status: 'pending',
-          requested_subscription: subscriptionType
-        })
-        .eq('id', user.id);
+      // For demo purposes, we'll update the local storage user object
+      // In a real app, this would be a Supabase update
+      const updatedUser = {
+        ...user,
+        subscription_status: 'pending',
+        requested_subscription: subscriptionType
+      };
       
-      if (updateError) {
-        throw new Error(updateError.message);
-      }
+      localStorage.setItem('sahlaUser', JSON.stringify(updatedUser));
       
       // Send notification to Telegram via the edge function
       const response = await supabase.functions.invoke('telegram-notification', {

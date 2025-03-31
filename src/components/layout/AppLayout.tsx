@@ -24,12 +24,12 @@ const AppLayout = () => {
           ? 'Order Limit Reached' 
           : 'Limite de commandes atteinte';
           
-        const message = language === 'en' 
+        const description = language === 'en' 
           ? 'You have reached your order limit. Please upgrade your subscription.'
           : 'Vous avez atteint votre limite de commandes. Veuillez mettre à niveau votre abonnement.';
         
         toast(title, {
-          description: message,
+          description: description,
           action: {
             label: language === 'en' ? 'Upgrade Now' : 'Mettre à niveau',
             onClick: () => navigate('/subscription')
@@ -43,12 +43,12 @@ const AppLayout = () => {
           ? 'Subscription Pending' 
           : 'Abonnement en attente';
           
-        const message = language === 'en' 
+        const description = language === 'en' 
           ? `Your ${user.requested_subscription} subscription is pending approval. We'll notify you once it's activated.`
           : `Votre abonnement ${user.requested_subscription} est en attente d'approbation. Nous vous informerons une fois qu'il sera activé.`;
         
         toast(title, {
-          description: message,
+          description: description,
         });
       }
       
@@ -58,12 +58,12 @@ const AppLayout = () => {
           ? 'Subscription Rejected' 
           : 'Abonnement refusé';
           
-        const message = language === 'en' 
+        const description = language === 'en' 
           ? 'Your subscription request was rejected. Please contact support for more information.'
           : 'Votre demande d\'abonnement a été refusée. Veuillez contacter le support pour plus d\'informations.';
         
         toast(title, {
-          description: message,
+          description: description,
         });
       }
     }

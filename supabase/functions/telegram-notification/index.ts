@@ -21,6 +21,14 @@ const corsHeaders = {
 }
 
 async function sendTelegramMessage(paymentData: PaymentData) {
+  // Escape any special characters in the command parts to prevent markdown issues
+  const userId = paymentData.userId.replace(/_/g, "\\_");
+  const subscriptionType = paymentData.subscriptionType.replace(/_/g, "\\_");
+  
+  // Create command strings but don't use markdown in the commands
+  const approveCommand = `/approve_${paymentData.userId}_${paymentData.subscriptionType}`;
+  const rejectCommand = `/reject_${paymentData.userId}`;
+
   const message = `
 🔔 *New Subscription Payment*
 
@@ -31,8 +39,8 @@ async function sendTelegramMessage(paymentData: PaymentData) {
 *User ID:* ${paymentData.userId}
 
 Use the following commands to approve or reject:
-\`/approve_${paymentData.userId}_${paymentData.subscriptionType}\`
-\`/reject_${paymentData.userId}\`
+${approveCommand}
+${rejectCommand}
   `
 
   const url = `https://api.telegram.org/bot${TELEGRAM_API_KEY}/sendMessage`
