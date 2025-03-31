@@ -31,8 +31,8 @@ async function sendTelegramMessage(paymentData: PaymentData) {
 *User ID:* ${paymentData.userId}
 
 Use the following commands to approve or reject:
-/approve_${paymentData.userId}_${paymentData.subscriptionType}
-/reject_${paymentData.userId}
+\`/approve_${paymentData.userId}_${paymentData.subscriptionType}\`
+\`/reject_${paymentData.userId}\`
   `
 
   const url = `https://api.telegram.org/bot${TELEGRAM_API_KEY}/sendMessage`

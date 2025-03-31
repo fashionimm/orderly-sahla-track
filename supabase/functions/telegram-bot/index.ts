@@ -1,8 +1,14 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4"
 
 const TELEGRAM_API_KEY = "7733675635:AAHmhH1jtGxs8KKF8dZmRyp6xPqKIuWiqSs"
 const CHAT_ID = "1349542277"
+
+// Initialize Supabase client with environment variables
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // CORS Headers
 const corsHeaders = {
@@ -38,8 +44,23 @@ serve(async (req) => {
         const [_, userId, subscriptionType] = text.split('_')
         
         if (userId && subscriptionType) {
-          // In a real implementation, you would update the user's subscription in your database
-          // This is a simplified example
+          // Update the user's subscription in the database
+          const { error } = await supabase
+            .from('users')
+            .update({ 
+              subscription: subscriptionType,
+              subscription_status: 'active' 
+            })
+            .eq('id', userId);
+            
+          if (error) {
+            await sendTelegramMessage(`❌ Error updating subscription for user ${userId}: ${error.message}`);
+            return new Response(
+              JSON.stringify({ success: false, error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
           await sendTelegramMessage(`✅ Approved subscription for user ${userId} to ${subscriptionType} plan`)
           
           return new Response(
@@ -54,7 +75,22 @@ serve(async (req) => {
         const userId = text.split('_')[1]
         
         if (userId) {
-          // In a real implementation, you would handle the rejection in your database
+          // Update the user's subscription status in the database
+          const { error } = await supabase
+            .from('users')
+            .update({ 
+              subscription_status: 'rejected' 
+            })
+            .eq('id', userId);
+            
+          if (error) {
+            await sendTelegramMessage(`❌ Error rejecting subscription for user ${userId}: ${error.message}`);
+            return new Response(
+              JSON.stringify({ success: false, error: error.message }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
           await sendTelegramMessage(`❌ Rejected subscription request for user ${userId}`)
           
           return new Response(

@@ -30,8 +30,9 @@ const translations = {
     submit: 'Submit Payment Details',
     cancel: 'Cancel',
     processing: 'Processing...',
-    successMessage: 'Payment details submitted! We will verify and activate your subscription soon.',
+    successMessage: 'Payment details submitted! Your subscription will be activated after verification.',
     errorMessage: 'Failed to submit payment details. Please try again.',
+    pendingMessage: 'Your subscription is now pending approval.',
   },
   fr: {
     title: 'Soumettre les informations de paiement',
@@ -47,13 +48,14 @@ const translations = {
     submit: 'Soumettre les détails du paiement',
     cancel: 'Annuler',
     processing: 'Traitement en cours...',
-    successMessage: 'Détails de paiement soumis! Nous vérifierons et activerons votre abonnement bientôt.',
+    successMessage: 'Détails de paiement soumis! Votre abonnement sera activé après vérification.',
     errorMessage: 'Échec de la soumission des détails de paiement. Veuillez réessayer.',
+    pendingMessage: 'Votre abonnement est maintenant en attente d\'approbation.',
   }
 };
 
 const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { language } = useLanguage();
   const t = translations[language];
   const [transactionId, setTransactionId] = useState('');
@@ -76,6 +78,19 @@ const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) 
     setIsSubmitting(true);
     
     try {
+      // Update user's subscription status to pending
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ 
+          subscription_status: 'pending',
+          requested_subscription: subscriptionType
+        })
+        .eq('id', user.id);
+      
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
+      
       // Send notification to Telegram via the edge function
       const response = await supabase.functions.invoke('telegram-notification', {
         body: {
@@ -93,7 +108,10 @@ const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) 
         throw new Error(response.error.message);
       }
       
-      toast.success(t.successMessage);
+      // Refresh the user to get updated subscription status
+      await refreshUser();
+      
+      toast.success(t.pendingMessage);
       onClose();
     } catch (error) {
       console.error('Payment submission error:', error);

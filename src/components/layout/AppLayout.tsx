@@ -16,6 +16,7 @@ const AppLayout = () => {
   // Check for subscription alerts
   useEffect(() => {
     if (user) {
+      // Check for order limit
       const isOrderLimitReached = user.subscription === 'free' && user.ordersUsed >= user.orderLimit;
       
       if (isOrderLimitReached) {
@@ -33,6 +34,36 @@ const AppLayout = () => {
             label: language === 'en' ? 'Upgrade Now' : 'Mettre à niveau',
             onClick: () => navigate('/subscription')
           }
+        });
+      }
+      
+      // Check for pending subscription
+      if (user.subscription_status === 'pending') {
+        const title = language === 'en' 
+          ? 'Subscription Pending' 
+          : 'Abonnement en attente';
+          
+        const message = language === 'en' 
+          ? `Your ${user.requested_subscription} subscription is pending approval. We'll notify you once it's activated.`
+          : `Votre abonnement ${user.requested_subscription} est en attente d'approbation. Nous vous informerons une fois qu'il sera activé.`;
+        
+        toast(title, {
+          description: message,
+        });
+      }
+      
+      // Check for rejected subscription
+      if (user.subscription_status === 'rejected') {
+        const title = language === 'en' 
+          ? 'Subscription Rejected' 
+          : 'Abonnement refusé';
+          
+        const message = language === 'en' 
+          ? 'Your subscription request was rejected. Please contact support for more information.'
+          : 'Votre demande d\'abonnement a été refusée. Veuillez contacter le support pour plus d\'informations.';
+        
+        toast(title, {
+          description: message,
         });
       }
     }
