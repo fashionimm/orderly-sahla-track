@@ -21,25 +21,18 @@ const corsHeaders = {
 }
 
 async function sendTelegramMessage(paymentData: PaymentData) {
-  // Escape special characters that might cause issues with Markdown parsing
-  const userId = paymentData.userId.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
-  const userName = paymentData.userName.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
-  const userEmail = paymentData.userEmail.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
-  const subscriptionType = paymentData.subscriptionType.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
-  const transactionId = paymentData.transactionId.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
-  
-  // Create plain text commands without markdown
+  // Format the commands in a way that Telegram will recognize as clickable
   const approveCommand = `/approve_${paymentData.userId}_${paymentData.subscriptionType}`;
   const rejectCommand = `/reject_${paymentData.userId}`;
 
   const message = `
 🔔 *New Subscription Payment*
 
-*User:* ${userName}
-*Email:* ${userEmail}
-*Plan:* ${subscriptionType}
-*Transaction ID:* ${transactionId}
-*User ID:* ${userId}
+*User:* ${paymentData.userName}
+*Email:* ${paymentData.userEmail}
+*Plan:* ${paymentData.subscriptionType}
+*Transaction ID:* ${paymentData.transactionId}
+*User ID:* ${paymentData.userId}
 
 Use the following commands to approve or reject:
 \`${approveCommand}\`

@@ -1,216 +1,214 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { useLanguage } from './LanguageContext';
 
-// Define user type
-type UserType = {
+// User type definition
+type User = {
   id: string;
   email: string;
   name: string;
   subscription: 'free' | 'premium' | 'unlimited';
   orderLimit: number;
   ordersUsed: number;
-  subscription_status?: 'pending' | 'rejected' | 'approved';
+  subscription_status?: 'active' | 'pending' | 'rejected';
   requested_subscription?: string;
-} | null;
+};
 
-// Define context type
-type AuthContextType = {
-  user: UserType;
+// Context type definition
+export type AuthContextType = {
+  user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signInWithGoogle: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
   signOut: () => Promise<void>;
-  isAdmin: boolean;
   refreshUser: () => Promise<void>;
 };
 
-// Create context with default values
+// Create context
 const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
-  signUp: async () => {},
-  signIn: async () => {},
-  signInWithGoogle: async () => {},
+  signIn: async () => ({ success: false }),
+  signUp: async () => ({ success: false }),
   signOut: async () => {},
-  isAdmin: false,
   refreshUser: async () => {},
 });
 
-// Hook to use auth context
-export const useAuth = () => useContext(AuthContext);
-
-// Auth provider component
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<UserType>(null);
+// Provider component
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const navigate = useNavigate();
   const { language } = useLanguage();
 
-  // Function to refresh user data
-  const refreshUser = async () => {
+  // Fetch user data from Supabase
+  const fetchUserData = async (userId: string) => {
     try {
-      const storedUser = localStorage.getItem('sahlaUser');
-      if (storedUser) {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
-        // Check if user is admin
-        setIsAdmin(parsedUser.email.includes('admin'));
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user data:', error);
+        return null;
       }
-    } catch (error) {
-      console.error('Error refreshing user:', error);
-    }
-  };
 
-  // Mock authentication functions for now
-  // These will be replaced with Supabase auth later
-  const signUp = async (email: string, password: string, name: string) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock user creation
-      const newUser = {
-        id: `user-${Date.now()}`,
-        email,
-        name,
-        subscription: 'free' as const,
-        orderLimit: 20,
-        ordersUsed: 0,
-        subscription_status: undefined,
-        requested_subscription: undefined
-      };
-      
-      // Store in local storage for persistence
-      localStorage.setItem('sahlaUser', JSON.stringify(newUser));
-      setUser(newUser);
-      toast.success(language === 'en' ? 'Account created successfully' : 'Compte créé avec succès');
-    } catch (error) {
-      console.error('Signup error:', error);
-      toast.error(language === 'en' ? 'Failed to create account' : 'Échec de la création du compte');
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // For demo, check if the email contains "admin" to grant admin privileges
-      if (email.includes('admin')) {
-        const adminUser = {
-          id: 'admin-id',
-          email,
-          name: 'Admin User',
-          subscription: 'unlimited' as const,
-          orderLimit: Infinity,
-          ordersUsed: 0,
-          subscription_status: undefined,
-          requested_subscription: undefined
-        };
-        localStorage.setItem('sahlaUser', JSON.stringify(adminUser));
-        setUser(adminUser);
-        setIsAdmin(true);
-      } else {
-        // For demo purposes, we'll create a user if none exists
-        const newUser = {
-          id: `user-${Date.now()}`,
-          email,
-          name: email.split('@')[0],
-          subscription: 'free' as const,
-          orderLimit: 20,
-          ordersUsed: 0,
-          subscription_status: undefined,
-          requested_subscription: undefined
-        };
-        localStorage.setItem('sahlaUser', JSON.stringify(newUser));
-        setUser(newUser);
+      if (!data) {
+        console.error('No user data found');
+        return null;
       }
-      
-      toast.success(language === 'en' ? 'Signed in successfully' : 'Connecté avec succès');
+
+      // Map database user to our User type
+      return {
+        id: data.id,
+        email: data.email,
+        name: data.name || data.email.split('@')[0],
+        subscription: data.subscription || 'free',
+        orderLimit: data.subscription === 'free' ? 20 : data.subscription === 'premium' ? 500 : Infinity,
+        ordersUsed: data.orders_used || 0,
+        subscription_status: data.subscription_status || 'active',
+        requested_subscription: data.requested_subscription,
+      } as User;
     } catch (error) {
-      console.error('Signin error:', error);
-      toast.error(language === 'en' ? 'Failed to sign in' : 'Échec de la connexion');
-      throw error;
-    }
-  };
-  
-  const signInWithGoogle = async () => {
-    try {
-      // Simulate API call for Google login
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock Google user creation
-      const googleUser = {
-        id: `google-user-${Date.now()}`,
-        email: 'google-user@example.com',
-        name: 'Google User',
-        subscription: 'free' as const,
-        orderLimit: 20,
-        ordersUsed: 0,
-        subscription_status: undefined,
-        requested_subscription: undefined
-      };
-      
-      localStorage.setItem('sahlaUser', JSON.stringify(googleUser));
-      setUser(googleUser);
-      toast.success(language === 'en' ? 'Signed in with Google' : 'Connecté avec Google');
-    } catch (error) {
-      console.error('Google signin error:', error);
-      toast.error(language === 'en' ? 'Failed to sign in with Google' : 'Échec de la connexion avec Google');
-      throw error;
+      console.error('Unexpected error fetching user:', error);
+      return null;
     }
   };
 
-  const signOut = async () => {
-    try {
-      // Remove from local storage
-      localStorage.removeItem('sahlaUser');
-      setUser(null);
-      setIsAdmin(false);
-      toast.success(language === 'en' ? 'Signed out successfully' : 'Déconnecté avec succès');
-    } catch (error) {
-      console.error('Signout error:', error);
-      toast.error(language === 'en' ? 'Failed to sign out' : 'Échec de la déconnexion');
-    }
-  };
-
-  // Check for existing user on load
+  // Initialize auth
   useEffect(() => {
-    const checkUser = () => {
-      try {
-        const storedUser = localStorage.getItem('sahlaUser');
-        if (storedUser) {
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          // Check if user is admin
-          setIsAdmin(parsedUser.email.includes('admin'));
-        }
-      } catch (error) {
-        console.error('Error checking user:', error);
-      } finally {
-        setLoading(false);
+    const initialize = async () => {
+      setLoading(true);
+      
+      // Check if user is already authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const userData = await fetchUserData(session.user.id);
+        setUser(userData);
       }
+      
+      setLoading(false);
+      
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          const userData = await fetchUserData(session.user.id);
+          setUser(userData);
+        } else if (event === 'SIGNED_OUT') {
+          setUser(null);
+        }
+      });
+      
+      // Cleanup subscription on unmount
+      return () => {
+        subscription.unsubscribe();
+      };
     };
-
-    checkUser();
+    
+    initialize();
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      signUp, 
-      signIn, 
-      signInWithGoogle, 
-      signOut, 
-      isAdmin,
-      refreshUser
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // Sign in function
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      
+      const userData = await fetchUserData(data.user.id);
+      setUser(userData);
+      
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Sign up function
+  const signUp = async (email: string, password: string, name: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+          },
+        },
+      });
+      
+      if (error) {
+        return { success: false, error: error.message };
+      }
+      
+      // Create user record in 'users' table
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: data.user?.id,
+            email,
+            name,
+            subscription: 'free',
+            orders_used: 0,
+            subscription_status: 'active',
+          },
+        ]);
+        
+      if (insertError) {
+        // Revert auth signup if user table insert fails
+        await supabase.auth.signOut();
+        return { success: false, error: insertError.message };
+      }
+      
+      // Fetch the newly created user
+      const userData = await fetchUserData(data.user!.id);
+      setUser(userData);
+      
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Sign out function
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    navigate('/auth');
+  };
+  
+  // Refresh user data
+  const refreshUser = async () => {
+    if (user) {
+      const userData = await fetchUserData(user.id);
+      setUser(userData);
+    }
+  };
+
+  // Context value
+  const value: AuthContextType = {
+    user,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    refreshUser,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+// Custom hook to use auth context
+export const useAuth = () => useContext(AuthContext);

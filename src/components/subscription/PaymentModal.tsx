@@ -1,67 +1,55 @@
 
 import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-type PaymentModalProps = {
+interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   subscriptionType: string;
-};
+}
 
 const translations = {
   en: {
-    title: 'Submit Payment Information',
-    description: 'Enter your Binance Pay transaction details to upgrade your subscription',
+    title: 'Payment Details',
+    description: 'Enter your Binance transaction ID to complete subscription payment',
     transactionId: 'Transaction ID',
-    transactionIdPlaceholder: 'Enter your Binance transaction ID',
-    binanceAccount: 'Your Binance Account (optional)',
-    binanceAccountPlaceholder: 'Your Binance account ID/email (optional)',
-    binanceInfo: 'Please send the payment to:',
-    binanceId: 'Binance ID: 384371330',
-    binanceEmail: 'Email: hassad.med.achraf@gmail.com',
-    instructions: 'After sending the payment, submit the transaction ID here. We will verify your payment and activate your subscription.',
+    binanceId: 'Binance ID (optional)',
+    binanceEmail: 'Binance Email (optional)',
     submit: 'Submit Payment Details',
-    cancel: 'Cancel',
-    processing: 'Processing...',
-    successMessage: 'Payment details submitted! Your subscription will be activated after verification.',
+    submitting: 'Processing...',
+    pendingMessage: 'Your payment is being processed. We will notify you once your subscription is activated.',
     errorMessage: 'Failed to submit payment details. Please try again.',
-    pendingMessage: 'Your subscription is now pending approval.',
   },
   fr: {
-    title: 'Soumettre les informations de paiement',
-    description: 'Entrez les détails de votre transaction Binance Pay pour mettre à niveau votre abonnement',
+    title: 'Détails de paiement',
+    description: 'Entrez votre ID de transaction Binance pour compléter le paiement de l\'abonnement',
     transactionId: 'ID de transaction',
-    transactionIdPlaceholder: 'Entrez votre ID de transaction Binance',
-    binanceAccount: 'Votre compte Binance (facultatif)',
-    binanceAccountPlaceholder: 'Votre ID/email de compte Binance (facultatif)',
-    binanceInfo: 'Veuillez envoyer le paiement à:',
-    binanceId: 'Binance ID: 384371330',
-    binanceEmail: 'Email: hassad.med.achraf@gmail.com',
-    instructions: 'Après avoir envoyé le paiement, soumettez l\'ID de transaction ici. Nous vérifierons votre paiement et activerons votre abonnement.',
-    submit: 'Soumettre les détails du paiement',
-    cancel: 'Annuler',
-    processing: 'Traitement en cours...',
-    successMessage: 'Détails de paiement soumis! Votre abonnement sera activé après vérification.',
+    binanceId: 'Binance ID (optionnel)',
+    binanceEmail: 'Email Binance (optionnel)',
+    submit: 'Soumettre les détails de paiement',
+    submitting: 'Traitement en cours...',
+    pendingMessage: 'Votre paiement est en cours de traitement. Nous vous informerons une fois que votre abonnement sera activé.',
     errorMessage: 'Échec de la soumission des détails de paiement. Veuillez réessayer.',
-    pendingMessage: 'Votre abonnement est maintenant en attente d\'approbation.',
   }
 };
 
-const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) => {
+const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscriptionType }) => {
   const { user, refreshUser } = useAuth();
   const { language } = useLanguage();
   const t = translations[language];
+  
   const [transactionId, setTransactionId] = useState('');
-  const [binanceAccount, setBinanceAccount] = useState('');
+  const [binanceId, setBinanceId] = useState('');
+  const [binanceEmail, setBinanceEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -82,31 +70,34 @@ const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) 
     setIsSubmitting(true);
     
     try {
-      // For demo purposes, we'll update the local storage user object
-      // In a real app, this would be a Supabase update
-      const updatedUser = {
-        ...user,
-        subscription_status: 'pending',
-        requested_subscription: subscriptionType
-      };
+      // First update user's subscription status to pending
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          subscription_status: 'pending',
+          requested_subscription: subscriptionType
+        })
+        .eq('id', user.id);
       
-      localStorage.setItem('sahlaUser', JSON.stringify(updatedUser));
+      if (updateError) {
+        throw new Error(updateError.message);
+      }
       
-      // Send notification to Telegram via the edge function
-      const response = await supabase.functions.invoke('telegram-notification', {
+      // Send notification to Telegram for admin approval
+      const notificationResponse = await supabase.functions.invoke('telegram-notification', {
         body: {
           userId: user.id,
           userName: user.name,
           userEmail: user.email,
           subscriptionType,
           transactionId,
-          binanceId: binanceAccount.includes('@') ? undefined : binanceAccount,
-          binanceEmail: binanceAccount.includes('@') ? binanceAccount : undefined
-        },
+          binanceId: binanceId || undefined,
+          binanceEmail: binanceEmail || undefined
+        }
       });
       
-      if (response.error) {
-        throw new Error(response.error.message);
+      if (!notificationResponse.data?.success) {
+        throw new Error('Failed to send notification for approval');
       }
       
       // Refresh the user to get updated subscription status
@@ -127,56 +118,49 @@ const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) 
       setIsSubmitting(false);
     }
   };
-
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{t.title}</DialogTitle>
           <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
-        
-        <div className="bg-muted p-3 rounded-md mb-4">
-          <p className="font-medium text-sm mb-2">{t.binanceInfo}</p>
-          <p className="text-sm">{t.binanceId}</p>
-          <p className="text-sm">{t.binanceEmail}</p>
-          <div className="mt-2 text-xs text-muted-foreground">
-            {t.instructions}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="transactionId">{t.transactionId}</Label>
+            <Input
+              id="transactionId"
+              value={transactionId}
+              onChange={(e) => setTransactionId(e.target.value)}
+              placeholder="e.g. 123456789"
+              required
+            />
           </div>
-        </div>
-        
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="transactionId">{t.transactionId} *</Label>
-              <Input
-                id="transactionId"
-                value={transactionId}
-                onChange={(e) => setTransactionId(e.target.value)}
-                placeholder={t.transactionIdPlaceholder}
-                required
-              />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="binanceAccount">{t.binanceAccount}</Label>
-              <Input
-                id="binanceAccount"
-                value={binanceAccount}
-                onChange={(e) => setBinanceAccount(e.target.value)}
-                placeholder={t.binanceAccountPlaceholder}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="binanceId">{t.binanceId}</Label>
+            <Input
+              id="binanceId"
+              value={binanceId}
+              onChange={(e) => setBinanceId(e.target.value)}
+              placeholder="e.g. 87654321"
+            />
           </div>
-          
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
-              {t.cancel}
+          <div className="space-y-2">
+            <Label htmlFor="binanceEmail">{t.binanceEmail}</Label>
+            <Input
+              id="binanceEmail"
+              type="email"
+              value={binanceEmail}
+              onChange={(e) => setBinanceEmail(e.target.value)}
+              placeholder="e.g. your.email@example.com"
+            />
+          </div>
+          <div className="flex justify-end">
+            <Button type="submit" disabled={isSubmitting} className="bg-sahla-500 hover:bg-sahla-600">
+              {isSubmitting ? t.submitting : t.submit}
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? t.processing : t.submit}
-            </Button>
-          </DialogFooter>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
