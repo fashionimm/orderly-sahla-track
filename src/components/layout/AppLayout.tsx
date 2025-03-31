@@ -19,12 +19,15 @@ const AppLayout = () => {
       const isOrderLimitReached = user.subscription === 'free' && user.ordersUsed >= user.orderLimit;
       
       if (isOrderLimitReached) {
+        const title = language === 'en' 
+          ? 'Order Limit Reached' 
+          : 'Limite de commandes atteinte';
+          
         const message = language === 'en' 
           ? 'You have reached your order limit. Please upgrade your subscription.'
           : 'Vous avez atteint votre limite de commandes. Veuillez mettre à niveau votre abonnement.';
         
-        toast({
-          title: language === 'en' ? 'Order Limit Reached' : 'Limite de commandes atteinte',
+        toast(title, {
           description: message,
           action: {
             label: language === 'en' ? 'Upgrade Now' : 'Mettre à niveau',
