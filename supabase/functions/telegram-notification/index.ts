@@ -21,26 +21,29 @@ const corsHeaders = {
 }
 
 async function sendTelegramMessage(paymentData: PaymentData) {
-  // Escape any special characters in the command parts to prevent markdown issues
-  const userId = paymentData.userId.replace(/_/g, "\\_");
-  const subscriptionType = paymentData.subscriptionType.replace(/_/g, "\\_");
+  // Escape special characters that might cause issues with Markdown parsing
+  const userId = paymentData.userId.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
+  const userName = paymentData.userName.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
+  const userEmail = paymentData.userEmail.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
+  const subscriptionType = paymentData.subscriptionType.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
+  const transactionId = paymentData.transactionId.replace(/([_*[\]()~`>#+=|{}.!-])/g, "\\$1");
   
-  // Create command strings but don't use markdown in the commands
+  // Create plain text commands without markdown
   const approveCommand = `/approve_${paymentData.userId}_${paymentData.subscriptionType}`;
   const rejectCommand = `/reject_${paymentData.userId}`;
 
   const message = `
 🔔 *New Subscription Payment*
 
-*User:* ${paymentData.userName}
-*Email:* ${paymentData.userEmail}
-*Plan:* ${paymentData.subscriptionType}
-*Transaction ID:* ${paymentData.transactionId}
-*User ID:* ${paymentData.userId}
+*User:* ${userName}
+*Email:* ${userEmail}
+*Plan:* ${subscriptionType}
+*Transaction ID:* ${transactionId}
+*User ID:* ${userId}
 
 Use the following commands to approve or reject:
-${approveCommand}
-${rejectCommand}
+\`${approveCommand}\`
+\`${rejectCommand}\`
   `
 
   const url = `https://api.telegram.org/bot${TELEGRAM_API_KEY}/sendMessage`

@@ -66,12 +66,16 @@ const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) 
     e.preventDefault();
     
     if (!transactionId.trim()) {
-      toast.error(language === 'en' ? 'Transaction ID is required' : 'L\'ID de transaction est requis');
+      toast(language === 'en' ? 'Error' : 'Erreur', {
+        description: language === 'en' ? 'Transaction ID is required' : 'L\'ID de transaction est requis'
+      });
       return;
     }
     
     if (!user) {
-      toast.error(language === 'en' ? 'You must be logged in' : 'Vous devez être connecté');
+      toast(language === 'en' ? 'Error' : 'Erreur', {
+        description: language === 'en' ? 'You must be logged in' : 'Vous devez être connecté'
+      });
       return;
     }
     
@@ -106,13 +110,19 @@ const PaymentModal = ({ isOpen, onClose, subscriptionType }: PaymentModalProps) 
       }
       
       // Refresh the user to get updated subscription status
-      await refreshUser();
+      if (refreshUser) {
+        await refreshUser();
+      }
       
-      toast.success(t.pendingMessage);
+      toast(language === 'en' ? 'Success' : 'Succès', {
+        description: t.pendingMessage
+      });
       onClose();
     } catch (error) {
       console.error('Payment submission error:', error);
-      toast.error(t.errorMessage);
+      toast(language === 'en' ? 'Error' : 'Erreur', {
+        description: t.errorMessage
+      });
     } finally {
       setIsSubmitting(false);
     }
