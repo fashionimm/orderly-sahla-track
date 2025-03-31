@@ -52,32 +52,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Fetch user data from Supabase
   const fetchUserData = async (userId: string) => {
     try {
-      // Since we're having type issues with Supabase tables, let's mock the user data fetching
-      // This is a temporary solution until the Supabase tables are properly defined
-      const mockUserData = {
-        id: userId,
-        email: 'user@example.com',
-        name: 'Demo User',
-        subscription: 'free',
-        orderLimit: 20,
-        ordersUsed: 0,
-        subscription_status: 'active',
-        requested_subscription: ''
-      };
-
-      // In a real implementation, we would fetch from Supabase like:
-      // const { data, error } = await supabase
-      //   .from('users')
-      //   .select('*')
-      //   .eq('id', userId)
-      //   .single();
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
       
-      // Check for admin email to set admin status for demo
-      if (mockUserData.email === 'admin@example.com') {
-        mockUserData.subscription = 'unlimited';
+      if (error) {
+        console.error('Error fetching user data:', error);
+        return null;
       }
-
-      return mockUserData as User;
+      
+      if (!data) {
+        // If no user data found, create a mock user for demo
+        const mockUserData = {
+          id: userId,
+          email: 'user@example.com',
+          name: 'Demo User',
+          subscription: 'free' as const,
+          orderLimit: 20,
+          ordersUsed: 0,
+          subscription_status: 'active' as const,
+          requested_subscription: ''
+        };
+        
+        // Check for admin email to set admin status for demo
+        if (mockUserData.email === 'admin@example.com') {
+          mockUserData.subscription = 'unlimited';
+        }
+        
+        return mockUserData;
+      }
+      
+      return data as User;
     } catch (error) {
       console.error('Unexpected error fetching user:', error);
       return null;
@@ -89,15 +96,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const initialize = async () => {
       setLoading(true);
       
-      // Check if user is already authenticated
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const userData = await fetchUserData(session.user.id);
-        setUser(userData);
+      try {
+        // Check if user is already authenticated
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          const userData = await fetchUserData(session.user.id);
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
       
       // Listen for auth changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -127,14 +138,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       if (error) {
+        console.error("Sign in error:", error.message);
         return { success: false, error: error.message };
       }
       
       const userData = await fetchUserData(data.user.id);
       setUser(userData);
       
+      navigate('/dashboard');
       return { success: true };
     } catch (error: any) {
+      console.error("Unexpected sign in error:", error);
       return { success: false, error: error.message };
     }
   };
@@ -153,53 +167,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       if (error) {
+        console.error("Sign up error:", error.message);
         return { success: false, error: error.message };
       }
       
       // In a real implementation, we would create the user in the users table:
-      // const { error: insertError } = await supabase
-      //   .from('users')
-      //   .insert([
-      //     {
-      //       id: data.user?.id,
-      //       email,
-      //       name,
-      //       subscription: 'free',
-      //       orders_used: 0,
-      //       subscription_status: 'active',
-      //     },
-      //   ]);
-        
       // For demo, just set the user
-      const userData = await fetchUserData(data.user!.id);
-      setUser(userData);
+      if (data.user) {
+        const userData = await fetchUserData(data.user.id);
+        setUser(userData);
+        
+        navigate('/dashboard');
+      }
       
       return { success: true };
     } catch (error: any) {
+      console.error("Unexpected sign up error:", error);
       return { success: false, error: error.message };
     }
   };
 
-  // Google sign-in function for demo
+  // Google sign-in function
   const signInWithGoogle = async () => {
     try {
-      // In a real implementation we would call:
-      // await supabase.auth.signInWithOAuth({ provider: 'google' });
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard'
+        }
+      });
       
-      // For demo, we'll just create a mock user
-      const mockUser = {
-        id: 'google-user-id',
-        email: 'google-user@example.com',
-        name: 'Google User',
-        subscription: 'free',
-        orderLimit: 20,
-        ordersUsed: 0,
-        subscription_status: 'active',
-        requested_subscription: ''
-      } as User;
-      
-      setUser(mockUser);
-      navigate('/dashboard');
+      if (error) {
+        console.error('Google sign in error:', error);
+        toast.error(language === 'en' ? 'Failed to sign in with Google' : 'Échec de la connexion avec Google');
+      }
     } catch (error) {
       console.error('Google sign in error:', error);
       toast.error(language === 'en' ? 'Failed to sign in with Google' : 'Échec de la connexion avec Google');
@@ -208,9 +209,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Sign out function
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    navigate('/auth');
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      navigate('/auth');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
   
   // Refresh user data

@@ -76,7 +76,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscripti
         .update({
           subscription_status: 'pending',
           requested_subscription: subscriptionType
-        })
+        } as any)
         .eq('id', user.id);
       
       if (updateError) {
@@ -91,8 +91,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscripti
           userEmail: user.email,
           subscriptionType,
           transactionId,
-          binanceId: binanceId || undefined,
-          binanceEmail: binanceEmail || undefined
+          binanceId: binanceId.trim() || undefined,
+          binanceEmail: binanceEmail.trim() || undefined
         }
       });
       
@@ -109,7 +109,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscripti
         description: t.pendingMessage
       });
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment submission error:', error);
       toast(language === 'en' ? 'Error' : 'Erreur', {
         description: t.errorMessage

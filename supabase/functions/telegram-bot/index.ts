@@ -16,7 +16,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-// Function to send email notification to user
+// Function to notify user about their subscription status
 async function notifyUser(userId: string, status: "approved" | "rejected", subscriptionType?: string) {
   try {
     // Get user details
@@ -31,10 +31,12 @@ async function notifyUser(userId: string, status: "approved" | "rejected", subsc
     }
     
     // In a real application, you would send an email here
-    // For now, we'll just log it
+    // For now, we'll log it for debugging purposes
     console.log(`Notification would be sent to ${userData.email}: Subscription ${status} ${status === "approved" ? "for " + subscriptionType + " plan" : ""}`);
     
     // You could implement email sending using a third-party service here
+    // For example, using SendGrid or a similar service
+    
     return { success: true };
   } catch (error) {
     console.error("Error notifying user:", error);
@@ -70,6 +72,8 @@ serve(async (req) => {
         const [_, userId, subscriptionType] = text.split('_')
         
         if (userId && subscriptionType) {
+          console.log(`Processing approval for user ${userId} to ${subscriptionType} plan`);
+          
           // Update the user's subscription in the database
           const { error } = await supabase
             .from('users')
@@ -89,9 +93,13 @@ serve(async (req) => {
           }
           
           // Notify the user about the approval
-          await notifyUser(userId, "approved", subscriptionType);
+          const notificationResult = await notifyUser(userId, "approved", subscriptionType);
           
-          await sendTelegramMessage(`✅ Approved subscription for user ${userId} to ${subscriptionType} plan. User has been notified.`);
+          if (!notificationResult.success) {
+            await sendTelegramMessage(`⚠️ Approved subscription for user ${userId}, but failed to notify user: ${notificationResult.error}`);
+          } else {
+            await sendTelegramMessage(`✅ Approved subscription for user ${userId} to ${subscriptionType} plan. User has been notified.`);
+          }
           
           return new Response(
             JSON.stringify({ success: true, message: 'Subscription approved' }),
@@ -105,6 +113,8 @@ serve(async (req) => {
         const userId = text.split('_')[1]
         
         if (userId) {
+          console.log(`Processing rejection for user ${userId}`);
+          
           // Update the user's subscription status in the database
           const { error } = await supabase
             .from('users')
@@ -123,9 +133,13 @@ serve(async (req) => {
           }
           
           // Notify the user about the rejection
-          await notifyUser(userId, "rejected");
+          const notificationResult = await notifyUser(userId, "rejected");
           
-          await sendTelegramMessage(`❌ Rejected subscription request for user ${userId}. User has been notified.`);
+          if (!notificationResult.success) {
+            await sendTelegramMessage(`⚠️ Rejected subscription for user ${userId}, but failed to notify user: ${notificationResult.error}`);
+          } else {
+            await sendTelegramMessage(`❌ Rejected subscription request for user ${userId}. User has been notified.`);
+          }
           
           return new Response(
             JSON.stringify({ success: true, message: 'Subscription rejected' }),
