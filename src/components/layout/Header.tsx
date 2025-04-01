@@ -16,18 +16,36 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import LanguageSwitcher from './LanguageSwitcher';
+import { Link } from 'react-router-dom';
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuTriggerStyle,
+} from '@/components/ui/navigation-menu';
 
 // Header translations
 const headerTranslations = {
   en: {
     profile: "Profile",
     adminPanel: "Admin Panel",
-    logout: "Log out"
+    logout: "Log out",
+    home: "Home",
+    features: "Features",
+    pricing: "Pricing",
+    contact: "Contact"
   },
   fr: {
     profile: "Profil",
     adminPanel: "Panneau d'Administration",
-    logout: "Déconnexion"
+    logout: "Déconnexion",
+    home: "Accueil",
+    features: "Fonctionnalités",
+    pricing: "Tarifs",
+    contact: "Contact"
   }
 };
 
@@ -49,6 +67,42 @@ const Header = () => {
         <span className="text-lg font-bold text-sahla-700 md:hidden">
           Sahla-Track
         </span>
+      </div>
+      
+      {/* Navigation Menu */}
+      <div className="hidden md:flex ml-6">
+        <NavigationMenu>
+          <NavigationMenuList>
+            <NavigationMenuItem>
+              <Link to="/">
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  {t.home}
+                </NavigationMenuLink>
+              </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <a href="/#features">
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  {t.features}
+                </NavigationMenuLink>
+              </a>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <a href="/#pricing">
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  {t.pricing}
+                </NavigationMenuLink>
+              </a>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <a href="/#contact">
+                <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                  {t.contact}
+                </NavigationMenuLink>
+              </a>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
       </div>
       
       <div className="ml-auto flex items-center space-x-2 sm:space-x-4">

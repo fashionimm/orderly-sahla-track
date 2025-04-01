@@ -18,6 +18,19 @@ export type UserRow = {
   requested_subscription: string;
 };
 
+// Update the Database type to include the users table
+export type Database = {
+  public: {
+    Tables: {
+      users: {
+        Row: UserRow;
+        Insert: Omit<UserRow, 'id'>;
+        Update: Partial<UserRow>;
+      };
+    };
+  };
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

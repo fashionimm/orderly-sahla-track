@@ -41,14 +41,29 @@ const LoginForm = ({ onSwitchToSignup }: LoginFormProps) => {
     setIsLoading(true);
     
     try {
-      await signIn(email, password);
+      // For demo purposes, show a success message for demo@example.com
+      if (email === 'demo@example.com' && password === 'demo123') {
+        toast.success(language === 'en' ? 'Demo login successful!' : 'Connexion démo réussie!');
+        const result = await signIn(email, password);
+        if (!result.success) {
+          setError(result.error || (language === 'en' ? 'Login failed' : 'Échec de la connexion'));
+        }
+        return;
+      }
       
-      if (rememberMe) {
-        localStorage.setItem('sahla-email', email);
-        localStorage.setItem('sahla-password', password);
+      const result = await signIn(email, password);
+      
+      if (!result.success) {
+        setError(result.error || (language === 'en' ? 'Login failed' : 'Échec de la connexion'));
+        toast.error(language === 'en' ? 'Failed to sign in' : 'Échec de la connexion');
       } else {
-        localStorage.removeItem('sahla-email');
-        localStorage.removeItem('sahla-password');
+        if (rememberMe) {
+          localStorage.setItem('sahla-email', email);
+          localStorage.setItem('sahla-password', password);
+        } else {
+          localStorage.removeItem('sahla-email');
+          localStorage.removeItem('sahla-password');
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -70,6 +85,13 @@ const LoginForm = ({ onSwitchToSignup }: LoginFormProps) => {
       setIsLoading(false);
     }
   };
+
+  const demoHint = 
+    <div className="text-xs text-muted-foreground mt-2 text-center">
+      {language === 'en' 
+        ? 'For demo, try: demo@example.com / demo123' 
+        : 'Pour démo, essayez: demo@example.com / demo123'}
+    </div>;
 
   return (
     <Card className="w-full max-w-md mx-auto shadow-lg border-sahla-100">
@@ -147,6 +169,7 @@ const LoginForm = ({ onSwitchToSignup }: LoginFormProps) => {
               {language === 'en' ? 'Remember me' : 'Se souvenir de moi'}
             </label>
           </div>
+          {demoHint}
           <Button 
             type="submit" 
             className="w-full bg-sahla-500 hover:bg-sahla-600" 
