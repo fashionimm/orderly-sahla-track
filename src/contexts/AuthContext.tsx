@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, UserRow } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from './LanguageContext';
 
@@ -65,14 +64,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       if (!data) {
         // If no user data found, create a mock user for demo
-        const mockUserData = {
+        const mockUserData: User = {
           id: userId,
           email: 'user@example.com',
           name: 'Demo User',
-          subscription: 'free' as const,
+          subscription: 'free',
           orderLimit: 20,
           ordersUsed: 0,
-          subscription_status: 'active' as const,
+          subscription_status: 'active',
           requested_subscription: ''
         };
         
