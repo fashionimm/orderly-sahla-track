@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase, UserRow } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
 
@@ -75,7 +75,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscripti
         .update({
           subscription_status: 'pending',
           requested_subscription: subscriptionType
-        } as Partial<UserRow>)
+        })
         .eq('id', user.id);
       
       if (updateError) {
