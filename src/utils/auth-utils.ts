@@ -17,6 +17,8 @@ export const fetchUserData = async (userId: string): Promise<User | null> => {
     }
     
     if (!data) {
+      console.log('No user data found for ID:', userId);
+      
       // If no user data found, create a mock user for demo
       const mockUserData: User = {
         id: userId,

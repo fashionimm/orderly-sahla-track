@@ -73,8 +73,7 @@ export const useAuthOperations = (
         return { success: false, error: error.message };
       }
       
-      // In a real implementation, we would create the user in the users table:
-      // For demo, just set the user
+      // If a user is created, fetch their data and set it
       if (data.user) {
         const userData = await fetchUserData(data.user.id);
         setUser(userData);
