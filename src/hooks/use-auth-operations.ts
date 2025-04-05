@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +15,7 @@ export const useAuthOperations = (
 
   // Sign in function
   const signIn = async (email: string, password: string) => {
+    setIsSubmitting(true);
     try {
       // For demo purposes, add a backdoor login for testing
       if (email === 'demo@example.com' && password === 'demo123') {
@@ -44,14 +44,23 @@ export const useAuthOperations = (
         return { success: false, error: error.message };
       }
       
-      const userData = await fetchUserData(data.user.id);
-      setUser(userData);
+      if (data.user) {
+        const userData = await fetchUserData(data.user.id);
+        if (userData) {
+          setUser(userData);
+          navigate('/dashboard');
+          return { success: true };
+        } else {
+          return { success: false, error: "Failed to fetch user data" };
+        }
+      }
       
-      navigate('/dashboard');
-      return { success: true };
+      return { success: false, error: "No user data returned" };
     } catch (error: any) {
       console.error("Unexpected sign in error:", error);
       return { success: false, error: error.message };
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

@@ -42,6 +42,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
+          console.log("Found existing session for user:", session.user.id);
           const userData = await fetchUserData(session.user.id);
           setUser(userData);
         }
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Listen for auth changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log("Auth state change:", event, session?.user?.id);
         if (event === 'SIGNED_IN' && session) {
           const userData = await fetchUserData(session.user.id);
           setUser(userData);
