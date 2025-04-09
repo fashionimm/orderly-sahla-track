@@ -1,12 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import PaymentModal from '@/components/subscription/PaymentModal';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const translations = {
   en: {
@@ -20,10 +21,11 @@ const translations = {
     unlimitedPlanDesc: 'For established businesses',
     month: 'month',
     currentPlan: 'Current Plan',
+    pendingApproval: 'Pending Approval',
     downgrade: 'Downgrade',
     upgrade: 'Upgrade',
     paymentMethods: 'Payment Methods',
-    paymentInfo: 'Sahla-Track uses Binance Pay for all subscription payments. After selecting a plan, enter your transaction ID and we will verify your payment manually.',
+    paymentInfo: 'Sahla-Track supports BaridiMob payments for all subscription upgrades. After selecting a plan, enter your transaction ID and we will verify your payment manually.',
     orderLimit: 'orders per month',
     unlimitedOrders: 'Unlimited orders',
     basicTracking: 'Basic order tracking',
@@ -35,10 +37,16 @@ const translations = {
     allPremiumFeatures: 'All Premium features',
     apiAccess: 'API access',
     advancedReporting: 'Advanced reporting',
-    binanceAccount: 'Binance Payment Details',
-    binanceId: 'Binance ID: 384371330',
-    binanceEmail: 'Email: hassad.med.achraf@gmail.com',
+    baridimobAccount: 'BaridiMob Payment Details',
+    cppNumber: 'CCP Number: 007999990008820434/19',
+    accountName: 'Account Name: BaridiMob',
     manualVerificationNote: 'After payment, submit your transaction ID. We will verify and activate your subscription within 24 hours.',
+    pendingPayments: 'Pending Payments',
+    paymentDate: 'Payment Date',
+    paymentAmount: 'Amount',
+    paymentStatus: 'Status',
+    transactionId: 'Transaction ID',
+    noPayments: 'No pending payments found',
   },
   fr: {
     title: 'Plans d\'abonnement',
@@ -51,10 +59,11 @@ const translations = {
     unlimitedPlanDesc: 'Pour les entreprises établies',
     month: 'mois',
     currentPlan: 'Plan actuel',
+    pendingApproval: 'En attente d\'approbation',
     downgrade: 'Rétrograder',
     upgrade: 'Mettre à niveau',
     paymentMethods: 'Méthodes de paiement',
-    paymentInfo: 'Sahla-Track utilise Binance Pay pour tous les paiements d\'abonnement. Après avoir sélectionné un plan, entrez votre ID de transaction et nous vérifierons votre paiement manuellement.',
+    paymentInfo: 'Sahla-Track prend en charge les paiements BaridiMob pour toutes les mises à niveau d\'abonnement. Après avoir sélectionné un plan, entrez votre ID de transaction et nous vérifierons manuellement votre paiement.',
     orderLimit: 'commandes par mois',
     unlimitedOrders: 'Commandes illimitées',
     basicTracking: 'Suivi de commande de base',
@@ -66,23 +75,82 @@ const translations = {
     allPremiumFeatures: 'Toutes les fonctionnalités Premium',
     apiAccess: 'Accès API',
     advancedReporting: 'Rapports avancés',
-    binanceAccount: 'Détails de paiement Binance',
-    binanceId: 'Binance ID: 384371330',
-    binanceEmail: 'Email: hassad.med.achraf@gmail.com',
+    baridimobAccount: 'Détails de paiement BaridiMob',
+    cppNumber: 'Numéro CCP: 007999990008820434/19',
+    accountName: 'Nom du compte: BaridiMob',
     manualVerificationNote: 'Après le paiement, soumettez votre ID de transaction. Nous vérifierons et activerons votre abonnement dans les 24 heures.',
+    pendingPayments: 'Paiements en attente',
+    paymentDate: 'Date de paiement',
+    paymentAmount: 'Montant',
+    paymentStatus: 'Statut',
+    transactionId: 'ID de transaction',
+    noPayments: 'Aucun paiement en attente trouvé',
   }
 };
 
+interface Payment {
+  id: string;
+  transaction_id: string;
+  subscription_type: string;
+  amount: number;
+  status: string;
+  created_at: string;
+}
+
 const Subscription = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { language } = useLanguage();
   const t = translations[language];
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const [pendingPayments, setPendingPayments] = useState<Payment[]>([]);
+  const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    if (user) {
+      fetchPendingPayments();
+    }
+  }, [user]);
+  
+  const fetchPendingPayments = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        throw error;
+      }
+      
+      setPendingPayments(data || []);
+    } catch (error) {
+      console.error('Error fetching payments:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handleUpgrade = (plan: string) => {
     setSelectedPlan(plan);
     setIsPaymentModalOpen(true);
+  };
+  
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'fr-FR', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
   };
   
   return (
@@ -167,6 +235,10 @@ const Subscription = () => {
               <Button className="w-full" variant="outline" disabled>
                 {t.currentPlan}
               </Button>
+            ) : user?.subscription_status === 'pending' && user?.requested_subscription === 'premium' ? (
+              <Button className="w-full" variant="outline" disabled>
+                <AlertCircle className="mr-2 h-4 w-4" /> {t.pendingApproval}
+              </Button>
             ) : (
               <Button className="w-full" onClick={() => handleUpgrade('premium')}>
                 {user?.subscription === 'unlimited' ? t.downgrade : t.upgrade}
@@ -214,6 +286,10 @@ const Subscription = () => {
               <Button className="w-full" variant="outline" disabled>
                 {t.currentPlan}
               </Button>
+            ) : user?.subscription_status === 'pending' && user?.requested_subscription === 'unlimited' ? (
+              <Button className="w-full" variant="outline" disabled>
+                <AlertCircle className="mr-2 h-4 w-4" /> {t.pendingApproval}
+              </Button>
             ) : (
               <Button className="w-full bg-sahla-500 hover:bg-sahla-600" onClick={() => handleUpgrade('unlimited')}>
                 {t.upgrade}
@@ -223,6 +299,52 @@ const Subscription = () => {
         </Card>
       </div>
       
+      {pendingPayments.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">{t.pendingPayments}</h2>
+          <div className="overflow-x-auto rounded-md border">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-muted">
+                <tr>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t.paymentDate}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t.transactionId}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t.paymentAmount}
+                  </th>
+                  <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t.paymentStatus}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-card divide-y divide-gray-200">
+                {pendingPayments.map((payment) => (
+                  <tr key={payment.id}>
+                    <td className="px-4 py-3 text-sm">
+                      {formatDate(payment.created_at)}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {payment.transaction_id}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      ${payment.amount}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        {payment.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+      
       <div className="mt-8 bg-muted p-4 rounded-md">
         <h2 className="text-xl font-semibold mb-2">{t.paymentMethods}</h2>
         <p className="text-muted-foreground mb-4">
@@ -230,17 +352,17 @@ const Subscription = () => {
         </p>
         <div className="flex flex-col space-y-4">
           <div className="bg-white p-3 rounded-md">
-            <h3 className="font-medium text-sm mb-2">{t.binanceAccount}</h3>
-            <p className="text-sm">{t.binanceId}</p>
-            <p className="text-sm">{t.binanceEmail}</p>
+            <h3 className="font-medium text-sm mb-2">{t.baridimobAccount}</h3>
+            <p className="text-sm">{t.cppNumber}</p>
+            <p className="text-sm">{t.accountName}</p>
             <p className="mt-2 text-xs text-muted-foreground">
               {t.manualVerificationNote}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <img 
-              src="https://public.bnbstatic.com/static/images/common/binance-pay.png" 
-              alt="Binance Pay" 
+              src="https://cdn.privat24.ua/icons/file/ServiceIcon_BaridiMob_b.png" 
+              alt="BaridiMob" 
               className="h-10 object-contain"
             />
           </div>
@@ -250,7 +372,11 @@ const Subscription = () => {
       {/* Payment Modal */}
       <PaymentModal 
         isOpen={isPaymentModalOpen} 
-        onClose={() => setIsPaymentModalOpen(false)}
+        onClose={() => {
+          setIsPaymentModalOpen(false);
+          fetchPendingPayments();
+          if (refreshUser) refreshUser();
+        }}
         subscriptionType={selectedPlan}
       />
     </div>

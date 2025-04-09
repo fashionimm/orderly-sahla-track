@@ -1,1 +1,15 @@
+
+# A string used to distinguish different Supabase projects on the same host. Defaults to the project ID.
 project_id = "fgrjdurorrehxxsmtlbj"
+
+# The port to use for the API URL. Defaults to 54321.
+api_port = 54321
+
+# The port to use for the Postgres database. Defaults to 54322.
+db_port = 54322
+
+[functions.telegram-notification]
+verify_jwt = true
+
+[functions.telegram-bot]
+verify_jwt = false

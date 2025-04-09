@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -17,10 +18,16 @@ interface PaymentModalProps {
 const translations = {
   en: {
     title: 'Payment Details',
-    description: 'Enter your Binance transaction ID to complete subscription payment',
+    description: 'Enter your payment transaction ID to complete subscription payment',
     transactionId: 'Transaction ID',
+    paymentMethods: 'Payment Methods',
+    baridiMob: 'BaridiMob',
+    binanceInfo: 'Binance Pay',
+    accountNumber: 'CCP Number: 007999990008820434/19',
+    accountName: 'Account Name: BaridiMob',
+    paymentInstructions: 'Make your payment using BaridiMob to the account above, then submit your transaction ID below.',
     binanceId: 'Binance ID (optional)',
-    binanceEmail: 'Binance Email (optional)',
+    email: 'Your Email',
     submit: 'Submit Payment Details',
     submitting: 'Processing...',
     pendingMessage: 'Your payment is being processed. We will notify you once your subscription is activated.',
@@ -28,14 +35,28 @@ const translations = {
   },
   fr: {
     title: 'Détails de paiement',
-    description: 'Entrez votre ID de transaction Binance pour compléter le paiement de l\'abonnement',
+    description: 'Entrez votre ID de transaction pour compléter le paiement de l\'abonnement',
     transactionId: 'ID de transaction',
+    paymentMethods: 'Méthodes de paiement',
+    baridiMob: 'BaridiMob',
+    binanceInfo: 'Binance Pay',
+    accountNumber: 'Numéro CCP: 007999990008820434/19',
+    accountName: 'Nom du compte: BaridiMob',
+    paymentInstructions: 'Effectuez votre paiement via BaridiMob sur le compte ci-dessus, puis soumettez votre identifiant de transaction ci-dessous.',
     binanceId: 'Binance ID (optionnel)',
-    binanceEmail: 'Email Binance (optionnel)',
+    email: 'Votre Email',
     submit: 'Soumettre les détails de paiement',
     submitting: 'Traitement en cours...',
     pendingMessage: 'Votre paiement est en cours de traitement. Nous vous informerons une fois que votre abonnement sera activé.',
     errorMessage: 'Échec de la soumission des détails de paiement. Veuillez réessayer.',
+  }
+};
+
+const getPlanPrice = (planType: string) => {
+  switch(planType) {
+    case 'premium': return 4.99;
+    case 'unlimited': return 9.99;
+    default: return 0;
   }
 };
 
@@ -45,8 +66,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscripti
   const t = translations[language];
   
   const [transactionId, setTransactionId] = useState('');
+  const [email, setEmail] = useState(user?.email || '');
+  const [paymentMethod, setPaymentMethod] = useState('baridimob');
   const [binanceId, setBinanceId] = useState('');
-  const [binanceEmail, setBinanceEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,16 +104,35 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscripti
         throw new Error(updateError.message);
       }
       
+      // Create a payment record
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          user_id: user.id,
+          email: email.trim(),
+          transaction_id: transactionId.trim(),
+          amount: getPlanPrice(subscriptionType),
+          subscription_type: subscriptionType,
+          status: 'pending'
+        })
+        .select();
+      
+      if (paymentError) {
+        throw new Error(paymentError.message);
+      }
+      
       // Send notification to Telegram for admin approval
       const notificationResponse = await supabase.functions.invoke('telegram-notification', {
         body: {
           userId: user.id,
           userName: user.name,
-          userEmail: user.email,
+          userEmail: email.trim() || user.email,
           subscriptionType,
-          transactionId,
+          transactionId: transactionId.trim(),
+          amount: getPlanPrice(subscriptionType),
+          paymentMethod,
           binanceId: binanceId.trim() || undefined,
-          binanceEmail: binanceEmail.trim() || undefined
+          paymentId: payment?.[0]?.id || ''
         }
       });
       
@@ -125,36 +166,51 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, subscripti
           <DialogTitle>{t.title}</DialogTitle>
           <DialogDescription>{t.description}</DialogDescription>
         </DialogHeader>
+        
+        <div className="mb-4 space-y-4">
+          <div className="bg-muted p-3 rounded-md">
+            <h3 className="font-medium text-sm mb-2">{t.baridiMob}</h3>
+            <p className="text-sm">{t.accountNumber}</p>
+            <p className="text-sm">{t.accountName}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {t.paymentInstructions}
+            </p>
+          </div>
+        </div>
+        
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">{t.email}</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="your.email@example.com"
+              required
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="transactionId">{t.transactionId}</Label>
             <Input
               id="transactionId"
               value={transactionId}
               onChange={(e) => setTransactionId(e.target.value)}
-              placeholder="e.g. 123456789"
+              placeholder="e.g. BRDM12345678"
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="binanceId">{t.binanceId}</Label>
-            <Input
-              id="binanceId"
-              value={binanceId}
-              onChange={(e) => setBinanceId(e.target.value)}
-              placeholder="e.g. 87654321"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="binanceEmail">{t.binanceEmail}</Label>
-            <Input
-              id="binanceEmail"
-              type="email"
-              value={binanceEmail}
-              onChange={(e) => setBinanceEmail(e.target.value)}
-              placeholder="e.g. your.email@example.com"
-            />
-          </div>
+          {paymentMethod === 'binance' && (
+            <div className="space-y-2">
+              <Label htmlFor="binanceId">{t.binanceId}</Label>
+              <Input
+                id="binanceId"
+                value={binanceId}
+                onChange={(e) => setBinanceId(e.target.value)}
+                placeholder="e.g. 87654321"
+              />
+            </div>
+          )}
           <div className="flex justify-end">
             <Button type="submit" disabled={isSubmitting} className="bg-sahla-500 hover:bg-sahla-600">
               {isSubmitting ? t.submitting : t.submit}

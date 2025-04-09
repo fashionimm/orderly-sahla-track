@@ -9,8 +9,11 @@ type PaymentData = {
   userEmail: string
   subscriptionType: string
   transactionId: string
+  amount: number
+  paymentMethod?: string
   binanceId?: string
   binanceEmail?: string
+  paymentId?: string
 }
 
 // CORS Headers
@@ -21,16 +24,28 @@ const corsHeaders = {
 
 async function sendTelegramMessage(paymentData: PaymentData) {
   // Create commands with clearer formatting
-  const approveCommand = `/approve_${paymentData.userId}_${paymentData.subscriptionType}`;
-  const rejectCommand = `/reject_${paymentData.userId}`;
+  const approveCommand = paymentData.paymentId 
+    ? `/approve_${paymentData.paymentId}` 
+    : `/approve_${paymentData.userId}_${paymentData.subscriptionType}`;
+    
+  const rejectCommand = paymentData.paymentId 
+    ? `/reject_${paymentData.paymentId}` 
+    : `/reject_${paymentData.userId}`;
 
-  // Build a clean message that keeps transaction ID separate from optional Binance details
+  // Format payment method
+  const paymentMethod = paymentData.paymentMethod === 'baridimob' 
+    ? 'BaridiMob' 
+    : 'Binance Pay';
+
+  // Build a clean message that keeps transaction ID separate from optional details
   let message = `
 🔔 *New Subscription Payment*
 
 *User:* ${paymentData.userName}
 *Email:* ${paymentData.userEmail}
 *Plan:* ${paymentData.subscriptionType}
+*Amount:* $${paymentData.amount}
+*Payment Method:* ${paymentMethod}
 *Transaction ID:* ${paymentData.transactionId}
 *User ID:* ${paymentData.userId}
 `;
